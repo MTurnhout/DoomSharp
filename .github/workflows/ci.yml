@@ -25,7 +25,7 @@ jobs:
         run: dotnet build src/DoomSharp.sln -c Release --no-restore
       - name: Run tests
         run: dotnet test src/DoomSharp.sln -c Release --no-build --verbosity normal
-      - name: Optional: regenerate spawn table (if original/info.c present)
+      - name: "Optional: regenerate spawn table (if original/info.c present)"
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: pwsh -File scripts/regen-spawn.ps1
 
