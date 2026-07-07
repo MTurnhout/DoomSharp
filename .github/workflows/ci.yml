@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch: {}
+
+jobs:
+  build-and-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore
+        run: dotnet restore src/DoomTests/DoomTests.csproj
+      - name: Build
+        run: dotnet build src/DoomTests/DoomTests.csproj -c Release --no-restore
+      - name: Run tests
+        run: dotnet test src/DoomTests/DoomTests.csproj -c Release --no-build --verbosity normal
+      - name: "Optional: regenerate spawn table (if original/info.c present)"
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: pwsh -File scripts/regen-spawn.ps1
+
+  regen-check:
+    name: Regen consistency check
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build Doom.App
+        run: dotnet build src/Doom.App/Doom.App.csproj -c Release --nologo
+      - name: Regenerate spawn table
+        run: |
+          set -e
+          dotnet run --project src/Doom.App --configuration Release -- --regen-spawn src/DoomGame/GeneratedSpawnTable.regenerated.ci.cs
+      - name: Compare regenerated vs committed
+        run: |
+          echo 'Comparing regenerated spawn table with committed file...'
+          git --no-pager diff --no-index --exit-code src/DoomGame/GeneratedSpawnTable.cs src/DoomGame/GeneratedSpawnTable.regenerated.ci.cs || (echo 'ERROR: Regenerated file differs from committed GeneratedSpawnTable.cs. Run regen locally and commit updates.' && exit 1)
+        shell: bash

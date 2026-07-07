@@ -1,0 +1,1 @@
+namespace DoomIO { /* Legacy placeholder removed; use WadReader in Wad.cs */ }
