@@ -15,7 +15,7 @@ namespace DoomGame
             var stateMap = new Dictionary<string, int>(StringComparer.Ordinal);
             var genPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "src", "DoomGame", "GeneratedStateTable.cs");
             // Try direct repo path if file exists, otherwise try to discover in assembly location
-            string genFull = genPath;
+            string? genFull = genPath;
             if (!File.Exists(genFull))
             {
                 // fallback: look relative to current working directory
@@ -24,13 +24,13 @@ namespace DoomGame
                     genFull = null;
             }
 
-            if (genFull == null || !File.Exists(genFull))
+            if (string.IsNullOrEmpty(genFull) || !File.Exists(genFull))
             {
                 // Can't find generated state table - abort
                 return;
             }
 
-            var genLines = File.ReadAllLines(genFull);
+            var genLines = File.ReadAllLines(genFull!);
             int idx = 0;
             foreach (var line in genLines)
             {
@@ -84,7 +84,7 @@ namespace DoomGame
                     {
                         // Scan this block to find the deathstate line
                         int j = i;
-                        string deathStateName = null;
+                                                string? deathStateName = null;
                         while (j < lineCount && !infoLines[j].TrimEnd().EndsWith("},") && !infoLines[j].TrimEnd().EndsWith("}\n") && !infoLines[j].TrimEnd().EndsWith("}\r\n"))
                         {
                             var l = infoLines[j].Trim();

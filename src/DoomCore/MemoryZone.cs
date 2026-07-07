@@ -51,9 +51,13 @@ namespace DoomCore
             int size = (requestSize + 3) & ~3;
             size += HeaderSize;
 
-            var baseBlock = Rover.Prev.User == null ? Rover.Prev : Rover; // mimic back up over free
-            var start = baseBlock.Prev;
-            var rover = baseBlock;
+                    if (Rover == null)
+                        throw new InvalidOperationException("MemoryZone not initialized (Rover is null)");
+
+                    // Rover and its neighbors should always be non-null after ClearZone()
+                    var baseBlock = Rover.Prev!.User == null ? Rover.Prev! : Rover; // mimic back up over free
+                    var start = baseBlock.Prev!;
+                    var rover = baseBlock;
 
             while (true)
             {
@@ -101,7 +105,8 @@ namespace DoomCore
                     Next = baseBlock.Next
                 };
 
-                newblock.Next.Prev = newblock;
+                if (newblock.Next != null)
+                    newblock.Next.Prev = newblock;
                 baseBlock.Next = newblock;
                 baseBlock.Size = size;
             }
@@ -124,7 +129,7 @@ namespace DoomCore
             Rover = baseBlock.Next;
 
             // return a small token object that represents the pointer (in real C code it's pointer into memory)
-            return baseBlock.User;
+            return baseBlock.User!;
         }
 
         public void Free(object ptr)
@@ -144,7 +149,8 @@ namespace DoomCore
                 {
                     other.Size += block.Size;
                     other.Next = block.Next;
-                    other.Next!.Prev = other;
+                    if (other.Next != null)
+                        other.Next.Prev = other;
 
                     if (block == Rover)
                         Rover = other;
@@ -152,12 +158,13 @@ namespace DoomCore
                     block = other;
                 }
 
-                other = block.Next!;
-                if (other.User == null)
+                other = block.Next;
+                if (other != null && other.User == null)
                 {
                     block.Size += other.Size;
                     block.Next = other.Next;
-                    block.Next!.Prev = block;
+                    if (block.Next != null)
+                        block.Next.Prev = block;
 
                     if (other == Rover)
                         Rover = block;
@@ -171,10 +178,10 @@ namespace DoomCore
 
         public void FreeTags(int lowtag, int hightag)
         {
-            var block = _blocklist.Next;
+            var block = _blocklist.Next!;
             while (block != _blocklist)
             {
-                var next = block.Next;
+                var next = block.Next!;
                 if (block.User != null && block.Tag >= lowtag && block.Tag <= hightag)
                 {
                     Free(block.User);
@@ -186,12 +193,12 @@ namespace DoomCore
         public int FreeMemory()
         {
             int free = 0;
-            var block = _blocklist.Next;
+            var block = _blocklist.Next!;
             while (block != _blocklist)
             {
                 if (block.User == null || block.Tag >= 100)
                     free += block.Size;
-                block = block.Next;
+                block = block.Next!;
             }
             return free;
         }
@@ -199,11 +206,11 @@ namespace DoomCore
         // For tests and inspection
         public IEnumerable<MemBlock> Blocks()
         {
-            var block = _blocklist.Next;
+            var block = _blocklist.Next!;
             while (block != _blocklist)
             {
                 yield return block;
-                block = block.Next;
+                block = block.Next!;
             }
         }
 
